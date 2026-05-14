@@ -8,18 +8,86 @@
         body, html {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
+            background-color: #e5e7eb;
+            font-family: sans-serif;
         }
-        iframe {
+        #pdf-container {
             width: 100%;
-            height: 100%;
-            border: none;
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .page-wrapper {
+            width: 100%;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            background-color: white;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #loading-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
         }
     </style>
+    <!-- Load PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
 <body>
-    <iframe src="加須センターホテルinfo_最終.pdf"></iframe>
+    <div id="pdf-container">
+        <div id="loading-msg">PDFを読み込んでいます...</div>
+    </div>
+
+    <script>
+        const url = '加須センターホテルinfo_最終.pdf';
+        const container = document.getElementById('pdf-container');
+        const loadingMsg = document.getElementById('loading-msg');
+
+        let loadingTask = pdfjsLib.getDocument(url);
+        loadingTask.promise.then(function(pdf) {
+            loadingMsg.style.display = 'none';
+            
+            // Create wrappers to maintain page order
+            for (let i = 1; i <= pdf.numPages; i++) {
+                let wrapper = document.createElement('div');
+                wrapper.className = 'page-wrapper';
+                wrapper.id = 'page-' + i;
+                container.appendChild(wrapper);
+            }
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                pdf.getPage(pageNum).then(function(page) {
+                    let scale = 2.0; // High resolution for mobile retina displays
+                    let viewport = page.getViewport({scale: scale});
+
+                    let canvas = document.createElement('canvas');
+                    let context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    let wrapper = document.getElementById('page-' + pageNum);
+                    wrapper.appendChild(canvas);
+
+                    let renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+                });
+            }
+        }).catch(function(reason) {
+            console.error(reason);
+            loadingMsg.textContent = 'PDFの読み込みに失敗しました。';
+        });
+    </script>
 </body>
 </html>
